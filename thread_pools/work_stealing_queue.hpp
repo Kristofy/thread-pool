@@ -34,6 +34,7 @@ public:
     for (int i = top; i < bottom; ++i) {
       newTasks->put(i, get(i));
     }
+    std::cout << "Resized!!" << std::endl;
     return newTasks;
   }
 };
@@ -56,8 +57,8 @@ public:
   }
 
   void pushBottom(std::shared_ptr<std::function<void()>> r) {
-    int oldBottom                               = bottom.load(std::memory_order_seq_cst);
-    int oldTop                                  = top.load(std::memory_order_seq_cst);
+    int oldBottom                               = bottom.load(std::memory_order_relaxed);
+    int oldTop                                  = top.load(std::memory_order_acquire);
     std::shared_ptr<CircularArray> currentTasks = tasks;
     int size                                    = oldBottom - oldTop;
     if (size >= currentTasks->capacity() - 1) {
@@ -65,7 +66,7 @@ public:
       tasks        = currentTasks;
     }
     tasks->put(oldBottom, r);
-    bottom.store(oldBottom + 1, std::memory_order_seq_cst);
+    bottom.store(oldBottom + 1, std::memory_order_release);
     std::cout << "Got " << oldBottom + 1 << std::endl;
   }
 
@@ -87,21 +88,21 @@ public:
 
   std::shared_ptr<std::function<void()>> popBottom() {
     auto currentTasks = tasks;
-    int oldBottom     = bottom.fetch_sub(1, std::memory_order_seq_cst) - 1;
-    int oldTop        = top.load(std::memory_order_seq_cst);
+    int oldBottom     = bottom.fetch_sub(1, std::memory_order_acq_rel) - 1;
+    int oldTop        = top.load(std::memory_order_acquire);
     int size          = oldBottom - oldTop;
     if (size < 0) {
-      bottom.store(oldTop, std::memory_order_seq_cst);
+      bottom.store(oldTop, std::memory_order_release);
       return nullptr;
     }
     auto r = currentTasks->get(oldBottom);
     if (size > 0) {
       return r;
     }
-    if (!top.compare_exchange_strong(oldTop, oldTop + 1, std::memory_order_seq_cst)) {
+    if (!top.compare_exchange_strong(oldTop, oldTop + 1, std::memory_order_acq_rel)) {
       r = nullptr;
     }
-    bottom.store(oldTop + 1, std::memory_order_seq_cst);
+    bottom.store(oldTop + 1, std::memory_order_release);
     return r;
   }
 };
@@ -174,7 +175,6 @@ public:
   void Enqueue(F &&f, Args &&...args) {
     // TODO this is reasonable for multi consumer, but this should be at least random for each consumer
     size_t index = std::hash<std::thread::id>{}(std::this_thread::get_id()) % queues.size();
-    std::cout << "Index: " << index << std::endl;
 
     auto task = std::make_shared<std::function<void()>>(
         [fn = std::forward<F>(f), ... capturedArgs = std::forward<Args>(args)]() mutable {
