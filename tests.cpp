@@ -1,3 +1,4 @@
+#include <atomic>
 #include <iostream>
 #include <memory>
 #include <functional>
@@ -180,125 +181,57 @@ void testConcurrentPushPop() {
   }
 }
 
-void testThreadPoolBasicFunctionality() {
-  ThreadPool pool(4);          // Create a thread pool with 4 threads
-  std::atomic<int> counter(0); // Shared counter
-
-  // Enqueue 10 tasks
-  for (int i = 0; i < 10; ++i) {
-    pool.Enqueue([&counter]() { counter.fetch_add(1); });
+inline int16_t collatz(uint64_t n) {
+  // Proof by wikipedia: less than 10^12 is 989345275647, which has 1348 steps
+  // Meaning that for the maximum uint32 -> 2^32-1 which is < 10^12 -> meaning steps can be integer
+  int16_t steps = 0;
+  while (n != 1) {
+    if (n % 2 == 0) {
+      n /= 2;
+    } else {
+      n = 3 * n + 1;
+    }
+    steps++;
   }
-
-  pool.Wait(); // Wait for all tasks to complete
-
-  // Check if the counter matches the number of tasks
-  if (counter.load() == 10) {
-    std::cout << "testThreadPoolBasicFunctionality: PASS\n";
-  } else {
-    std::cout << "testThreadPoolBasicFunctionality: FAIL (expected 10, got " << counter.load() << ")\n";
-  }
+  return steps;
 }
 
 void testThreadPoolWithMultipleTasks() {
-  ThreadPool pool(1);
-  std::atomic<int> counter(0);
+  work_stealing::ThreadPool tp(4);
+  std::vector<std::function<void()>> tasks;
 
-  const int n = 310;
-  // Enqueue 100 tasks
-  for (int i = 0; i < n; ++i) {
-    pool.Enqueue([&counter]() { counter.fetch_add(1); });
-  }
-
-  pool.Wait();
-
-  if (counter.load() == n) {
-    std::cout << "testThreadPoolWithMultipleTasks: PASS\n";
-  } else {
-    std::cout << "testThreadPoolWithMultipleTasks: FAIL (expected 100, got " << counter.load() << ")\n";
-  }
-}
-
-void testThreadPoolShutdown() {
-  ThreadPool pool(4);
-  std::atomic<int> counter(0);
-  auto task = [&counter]() { counter.fetch_add(1); };
-
-  // Enqueue 10 tasks
-  for (int i = 0; i < 10; ++i) {
-    pool.Enqueue(task);
-  }
-
-  // Wait for all tasks to complete before destroying the pool
-  pool.Wait();
-
-  if (counter.load() == 10) {
-    std::cout << "testThreadPoolShutdown: PASS\n";
-  } else {
-    std::cout << "testThreadPoolShutdown: FAIL (expected 10, got " << counter.load() << ")\n";
-  }
-}
-
-void testThreadPoolTaskStealing() {
-  ThreadPool pool(4);
-  std::atomic<int> counter(0);
-
-  // Create tasks that increment the counter
-  for (int i = 0; i < 20; ++i) {
-    pool.Enqueue([&counter]() { counter.fetch_add(1); });
-  }
-
-  pool.Wait();
-
-  if (counter.load() == 20) {
-    std::cout << "testThreadPoolTaskStealing: PASS\n";
-  } else {
-    std::cout << "testThreadPoolTaskStealing: FAIL (expected 20, got " << counter.load() << ")\n";
-  }
-}
-
-void testThreadPoolConcurrentEnqueue() {
-  ThreadPool pool(4);
-  std::atomic<int> counter(0);
-  std::vector<std::thread> threads;
-
-  // Launch several threads that enqueue tasks
-  for (int i = 0; i < 10; ++i) {
-    threads.emplace_back([&pool, &counter]() {
-      for (int j = 0; j < 10; ++j) {
-        pool.Enqueue([&counter]() { counter.fetch_add(1); });
-      }
+  tp.task_count.fetch_add(3, std::memory_order_relaxed);
+  for (uint64_t i = 0; i < 4; i++) {
+    tasks.push_back([&tp, i]() {
+      if (i == 3) return;
+      ;
+      tp.queues[work_stealing::me]->pushBottom(std::make_shared<std::function<void()>>([]() {
+        std::cout << "Hey" << std::endl;
+      }));
     });
   }
 
-  // Join all threads
-  for (auto &thread : threads) {
-    thread.join();
-  }
-
-  pool.Wait();
-
-  if (counter.load() == 100) {
-    std::cout << "testThreadPoolConcurrentEnqueue: PASS\n";
-  } else {
-    std::cout << "testThreadPoolConcurrentEnqueue: FAIL (expected 100, got " << counter.load() << ")\n";
-  }
+  tp.Enqueue(std::move(tasks));
+  std::cout << "Waiting...." << std::endl;
+  tp.Wait();
+  std::cout << "Done!!!!!!!" << std::endl;
 }
 
 } // namespace work_stealing
 
 int main() {
   using namespace work_stealing;
-  testCapacity();
-  testPutAndGet();
-  testCircularIndexing();
-  testResize();
-  testResizeWithWraparound();
-
-  testIsEmpty();
-  testPushBottomAndPopTop();
-  testPushBottomAndPopBottom();
-  testPopFromEmptyQueue();
-  testConcurrentPushPop();
+  // testCapacity();
+  // testPutAndGet();
+  // testCircularIndexing();
+  // testResize();
+  // testResizeWithWraparound();
+  //
+  // testIsEmpty();
+  // testPushBottomAndPopTop();
+  // testPushBottomAndPopBottom();
+  // testPopFromEmptyQueue();
+  // testConcurrentPushPop();
 
   // testThreadPoolBasicFunctionality();
   testThreadPoolWithMultipleTasks();

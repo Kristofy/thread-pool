@@ -1,13 +1,13 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <ostream>
 
 // Unity build
 #include "collatz.cpp"
 #include "colors.hpp"
 #include "thread_pools/locking_threadpool.hpp"
-// #include "thread_pools/compare_exchange_threadpool.hpp"
 #include "thread_pools/work_stealing_queue.hpp"
 #include "timer.hpp"
 #include "utils.hpp"
@@ -71,11 +71,10 @@ std::vector<int16_t> naive(uint64_t n) {
   return collatz_values;
 }
 
+template <int res, size_t cores>
 std::vector<int16_t> locking_threadpool(uint64_t n) {
   std::vector<int16_t> collatz_values(n);
-  locking::ThreadPool tp(std::thread::hardware_concurrency());
-
-  constexpr int res = 100;
+  locking::ThreadPool tp(cores);
 
   auto action = +[](uint64_t from, uint64_t to, int16_t *out) {
     for (uint64_t i = from; i < to; i++) {
@@ -93,51 +92,33 @@ std::vector<int16_t> locking_threadpool(uint64_t n) {
   return collatz_values;
 }
 
-// std::vector<int16_t> compare_exchange_threadpool(uint64_t n) {
-//   std::vector<int16_t> collatz_values(n);
-//   compare_exchange::ThreadPool tp(std::thread::hardware_concurrency());
-//
-//   constexpr int res = 1;
-//
-//   auto action = +[](uint64_t from, uint64_t to, int16_t *out) {
-//     for (uint64_t i = from; i < to; i++) {
-//       *out = collatz(i);
-//       ++out;
-//     }
-//   };
-//
-//   for (uint64_t i = 1; i <= n; i += res) {
-//     tp.Enqueue(action, i, std::min(i + res, n + 1), collatz_values.data() + i - 1);
-//   }
-//
-//   tp.Wait();
-//
-//   // Check the values
-//   std::cout << "dbg: ";
-//   for (int i = 0; i < 100; i++) {
-//     std::cout << collatz_values[i] << " ";
-//   }
-//   std::flush(std::cout);
-//
-//   return collatz_values;
-// }
-
+template <int res, size_t threads>
 std::vector<int16_t> work_stealing_threadpool(uint64_t n) {
+  work_stealing::ThreadPool tp(threads);
+
   std::vector<int16_t> collatz_values(n);
-  work_stealing::ThreadPool tp(std::thread::hardware_concurrency() - 2);
+  std::vector<std::function<void()>> tasks;
 
-  constexpr int res = 16;
+  auto data = collatz_values.data();
+  for (uint64_t i = 0; i < threads; i++) {
 
-  auto action = +[](uint64_t from, uint64_t to, int16_t *out) {
-    for (uint64_t i = from; i < to; i++) {
-      *out = collatz(i);
-      ++out;
-    }
-  };
+    tasks.push_back([&tp, n, data, i]() {
+      for (size_t j = 1; j <= n; j += res * threads) {
 
-  for (uint64_t i = 1; i <= n; i += res) {
-    tp.Enqueue(action, i, std::min(i + res, n + 1), collatz_values.data() + i - 1);
+        size_t from = j + i * res;
+        size_t to   = std::min(j + res * threads, n + 1);
+
+        tp.queues[work_stealing::me]->pushBottom(std::make_shared<std::function<void()>>([from, to, data]() {
+          for (uint64_t l = from; l < to; l++) {
+            data[l - 1] = collatz(l);
+          }
+        }));
+        tp.task_count.fetch_add(1, std::memory_order_relaxed);
+      }
+    });
   }
+
+  tp.Enqueue(std::move(tasks));
 
   tp.Wait();
 
@@ -147,7 +128,7 @@ std::vector<int16_t> work_stealing_threadpool(uint64_t n) {
 int main() {
 
   // const int n_max                 = 1e5;
-  const int n_max                 = 20000;
+  const int n_max                 = 1000000;
   const int k_max                 = 10;
   const int segments_max          = 10;
   const uint64_t collatz_checksum = get_collatz_checksum_until(n_max, true, true);
@@ -155,9 +136,48 @@ int main() {
   std::vector<statistics> stats;
   std::vector<std::tuple<std::string, std::function<std::vector<int16_t>(uint64_t)>>> functions = {
       {"Naive     ", naive},
-      {"Locking TP", locking_threadpool},
-      // {"CAS TP", compare_exchange_threadpool},
-      {"Ws CAS TP", work_stealing_threadpool},
+
+      {"LockingTP 100b / 4", locking_threadpool<n_max / 100, 4>},
+      // {"LockingTP 1000b / 4", locking_threadpool<n_max / 1000, 4>},
+      // {"LockingTP 10000b / 4", locking_threadpool<n_max / 10000, 4>},
+      // {"Ws_CAS_TP 100b / 4", work_stealing_threadpool<n_max / 100, 4>},
+      // {"Ws_CAS_TP 1000b / 4", work_stealing_threadpool<n_max / 1000, 4>},
+      // {"Ws_CAS_TP 10000b / 4", work_stealing_threadpool<n_max / 10000, 4>},
+
+      // {"LockingTP 100b / 6", locking_threadpool<n_max / 100, 6>},
+      // {"LockingTP 1000b / 6", locking_threadpool<n_max / 1000, 6>},
+      // {"LockingTP 10000b / 6", locking_threadpool<n_max / 10000, 6>},
+      {"Ws_CAS_TP 100b / 6", work_stealing_threadpool<n_max / 100, 6>},
+      {"Ws_CAS_TP 1000b / 6", work_stealing_threadpool<n_max / 1000, 6>},
+      {"Ws_CAS_TP 10000b / 6", work_stealing_threadpool<n_max / 10000, 6>},
+
+      // {"LockingTP 100b / 8", locking_threadpool<n_max / 100, 8>},
+      // {"LockingTP 1000b / 8", locking_threadpool<n_max / 1000, 8>},
+      // {"LockingTP 10000b / 8", locking_threadpool<n_max / 10000, 8>},
+      // {"Ws_CAS_TP 100b / 8", work_stealing_threadpool<n_max / 100, 8>},
+      // {"Ws_CAS_TP 1000b / 8", work_stealing_threadpool<n_max / 1000, 8>},
+      // {"Ws_CAS_TP 10000b / 8", work_stealing_threadpool<n_max / 10000, 8>},
+      //
+      // {"LockingTP 100b / 16", locking_threadpool<n_max / 100, 16>},
+      // {"LockingTP 1000b / 16", locking_threadpool<n_max / 1000, 16>},
+      // {"LockingTP 10000b / 16", locking_threadpool<n_max / 10000, 16>},
+      // {"Ws_CAS_TP 100b / 16", work_stealing_threadpool<n_max / 100, 16>},
+      // {"Ws_CAS_TP 1000b / 16", work_stealing_threadpool<n_max / 1000, 16>},
+      // {"Ws_CAS_TP 10000b / 16", work_stealing_threadpool<n_max / 10000, 16>},
+      //
+      // {"LockingTP 100b / 32", locking_threadpool<n_max / 100, 32>},
+      // {"LockingTP 1000b / 32", locking_threadpool<n_max / 1000, 32>},
+      // {"LockingTP 10000b / 32", locking_threadpool<n_max / 10000, 32>},
+      // {"Ws_CAS_TP 100b / 32", work_stealing_threadpool<n_max / 100, 32>},
+      // {"Ws_CAS_TP 1000b / 32", work_stealing_threadpool<n_max / 1000, 32>},
+      // {"Ws_CAS_TP 10000b / 32", work_stealing_threadpool<n_max / 10000, 32>},
+      //
+      // {"LockingTP 100b / 64", locking_threadpool<n_max / 100, 64>},
+      // {"LockingTP 1000b / 64", locking_threadpool<n_max / 1000, 64>},
+      // {"LockingTP 10000b / 64", locking_threadpool<n_max / 10000, 64>},
+      // {"Ws_CAS_TP 100b / 64", work_stealing_threadpool<n_max / 100, 64>},
+      // {"Ws_CAS_TP 1000b / 64", work_stealing_threadpool<n_max / 1000, 64>},
+      // {"Ws_CAS_TP 10000b / 64", work_stealing_threadpool<n_max / 10000, 64>},
   };
 
   std::vector<double> times;

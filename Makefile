@@ -23,6 +23,9 @@ main: main.cpp
 run: main
 	./main
 
+btest: tests.cpp
+	$(CXX) $(CXX_FLAGS) $(CXX_DEFINES) $(CXX_LINK) tests.cpp -o test
+
 test: tests.cpp
 	$(CXX) $(CXX_FLAGS) $(CXX_DEFINES) $(CXX_LINK) tests.cpp -o test
 	./test
