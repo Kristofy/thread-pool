@@ -15,7 +15,6 @@
 #include "collatz.cpp"
 #include "thread_pools/work_stealing_queue.cpp"
 
-
 /**
  * @brief Times the collatz conjecture with a function
  *
@@ -88,7 +87,7 @@ std::vector<int16_t> work_stealing_threadpool(uint64_t n) {
       for (size_t j = 1; j <= n; j += res * threads) {
 
         size_t from = j + i * res;
-        size_t to   = std::min(j + res * threads, n + 1);
+        size_t to   = std::min(j + res * (i + 1), n + 1);
 
         tp.queues[work_stealing::me]->pushBottom(std::make_shared<std::function<void()>>([from, to, data]() {
           for (uint64_t l = from; l < to; l++) {
@@ -117,6 +116,7 @@ int main() {
 
   std::vector<statistics> stats;
   std::vector<std::tuple<std::string, std::function<std::vector<int16_t>(uint64_t)>>> functions = {
+
       {"Naive     ", naive},
 
       {"LockingTP 100b / 4t", locking_threadpool<n_max / 100, 4>},
@@ -139,21 +139,21 @@ int main() {
       {"Ws_CAS_TP 100b / 8t", work_stealing_threadpool<n_max / 100, 8>},
       {"Ws_CAS_TP 1000b / 8t", work_stealing_threadpool<n_max / 1000, 8>},
       {"Ws_CAS_TP 10000b / 8t", work_stealing_threadpool<n_max / 10000, 8>},
-      
+
       {"LockingTP 100b / 16t", locking_threadpool<n_max / 100, 16>},
       {"LockingTP 1000b / 16t", locking_threadpool<n_max / 1000, 16>},
       {"LockingTP 10000b / 16t", locking_threadpool<n_max / 10000, 16>},
       {"Ws_CAS_TP 100b / 16t", work_stealing_threadpool<n_max / 100, 16>},
       {"Ws_CAS_TP 1000b / 16t", work_stealing_threadpool<n_max / 1000, 16>},
       {"Ws_CAS_TP 10000b / 16t", work_stealing_threadpool<n_max / 10000, 16>},
-      
+
       {"LockingTP 100b / 32t", locking_threadpool<n_max / 100, 32>},
       {"LockingTP 1000b / 32t", locking_threadpool<n_max / 1000, 32>},
       {"LockingTP 10000b / 32t", locking_threadpool<n_max / 10000, 32>},
       {"Ws_CAS_TP 100b / 32t", work_stealing_threadpool<n_max / 100, 32>},
       {"Ws_CAS_TP 1000b / 32t", work_stealing_threadpool<n_max / 1000, 32>},
       {"Ws_CAS_TP 10000b / 32t", work_stealing_threadpool<n_max / 10000, 32>},
-      
+
       {"LockingTP 100b / 64t", locking_threadpool<n_max / 100, 64>},
       {"LockingTP 1000b / 64t", locking_threadpool<n_max / 1000, 64>},
       {"LockingTP 10000b / 64t", locking_threadpool<n_max / 10000, 64>},
@@ -162,8 +162,8 @@ int main() {
       {"Ws_CAS_TP 10000b / 64t", work_stealing_threadpool<n_max / 10000, 64>},
   };
 
-  std::vector<double> times;
   for (const auto &[name, function] : functions) {
+    std::vector<double> times;
     std::cout << colorTerminal(TerminalColor::TC_BRIGHT_WHITE, true) << name << ": " << resetTerminal() << "\t|" << std::string(segments_max, '-') << "|";
     std::flush(std::cout);
 

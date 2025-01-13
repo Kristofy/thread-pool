@@ -2,7 +2,7 @@
  * @file work_stealing_queue.h
  * @brief A work stealing queue
  * @date 2025-1-08
- * 
+ *
  */
 
 #pragma once
@@ -10,11 +10,12 @@
 #include <atomic>
 #include <chrono>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <mutex>
+#include <ostream>
 #include <vector>
 #include <thread>
-#include <iostream>
 #include <random>
 #include <condition_variable>
 
@@ -94,7 +95,7 @@ public:
 
 /**
  * @brief A work stealing queue
- * 
+ *
  * This queue is unbounded but only supports a single consumer and a single producer from the same thread.
  */
 class UnboundedDEQueue {
@@ -208,7 +209,6 @@ public:
   }
 };
 
-
 /**
  * @brief A thread pool using work stealing queues
  */
@@ -242,6 +242,8 @@ private:
     std::shared_ptr<std::function<void()>> task;
     me = index;
 
+    auto &queue = *queues[index];
+
     // Wait for the first task
 
     // Sleep until explicitly notified, not get the task yet
@@ -251,11 +253,10 @@ private:
       cv.wait(lock, [&]() { return waiting.load(std::memory_order_relaxed) == static_cast<int>(workers.size()); });
     }
 
-
     // We can get the tasks now
     {
       while (!task) {
-        task = queues[index]->popTop();
+        task = queue.popTop();
         std::this_thread::yield();
       }
     }
@@ -272,23 +273,26 @@ private:
       cv.wait(lock, [&]() { return ready.load(std::memory_order_relaxed) == static_cast<int>(workers.size()); });
     }
 
-
     while (!stop.load()) {
       while (task) {
         (*task)();
         task_count.fetch_sub(1, std::memory_order_relaxed);
-        if (task_count == 0) {
+        if (task_count.load(std::memory_order_relaxed) == 0) {
           // Avoid a spin lock
           std::unique_lock<std::mutex> lock(cv_mutex);
           cv.notify_all();
         }
-        task = queues[index]->popBottom();
+        task = queue.popBottom();
       }
 
-      while (!task && !stop.load()) {
+      while (!task && !stop.load(std::memory_order_relaxed)) {
         std::this_thread::yield();
-        size_t victim = dist(gen);
-        task          = queues[victim]->popTop();
+
+        task = queue.popBottom();
+        if (!task) {
+          size_t victim = dist(gen);
+          task          = queues[victim]->popTop();
+        }
       }
     }
   }
@@ -296,11 +300,11 @@ private:
 public:
   /**
    * @brief Construct a new ThreadPool object
-   * 
+   *
    * @param numThreads the number of threads to use in the pool
-   * 
+   *
    * This constructor will spawn the specified number of threads and start
-   * the loop to wait for tasks. 
+   * the loop to wait for tasks.
    */
   ThreadPool(size_t numThreads)
       : task_count(0), stop(false), dist(0, numThreads - 1), ready(0), waiting(0) {
