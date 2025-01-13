@@ -1,8 +1,20 @@
+/**
+ * @file tests.cpp
+ * @brief Unit tests for the WorkStealingQueue class and components
+ * @date 2025-1-08
+ * 
+ * @note You can run this with the command `make test`
+ */
+
 #include <atomic>
 #include <iostream>
 #include <memory>
 #include <functional>
 #include "thread_pools/work_stealing_queue.hpp" // Assume the class is in this header file
+
+// Unity build
+#include "thread_pools/work_stealing_queue.cpp"
+
 
 namespace work_stealing {
 
@@ -62,6 +74,7 @@ void testResize() {
   } else {
     std::cout << "testResize: FAIL\n";
   }
+  delete resizedArray;
 }
 
 void testResizeWithWraparound() {
@@ -82,6 +95,8 @@ void testResizeWithWraparound() {
   } else {
     std::cout << "testResizeWithWraparound: FAIL\n";
   }
+
+  delete resizedArray;
 }
 
 void testIsEmpty() {
@@ -200,43 +215,45 @@ void testThreadPoolWithMultipleTasks() {
   work_stealing::ThreadPool tp(4);
   std::vector<std::function<void()>> tasks;
 
-  tp.task_count.fetch_add(3, std::memory_order_relaxed);
-  for (uint64_t i = 0; i < 4; i++) {
-    tasks.push_back([&tp, i]() {
-      if (i == 3) return;
-      ;
-      tp.queues[work_stealing::me]->pushBottom(std::make_shared<std::function<void()>>([]() {
-        std::cout << "Hey" << std::endl;
-      }));
+  std::atomic<uint64_t> cnt = 0;
+  for (uint64_t i = 0; i < tp.queues.size(); i++) {
+
+    tasks.push_back([&tp, &cnt]() {
+     
+        tp.queues[work_stealing::me]->pushBottom(std::make_shared<std::function<void()>>([&cnt]() {
+          ++cnt;
+        }));
+        tp.task_count.fetch_add(1, std::memory_order_relaxed);
     });
   }
 
   tp.Enqueue(std::move(tasks));
-  std::cout << "Waiting...." << std::endl;
+
   tp.Wait();
-  std::cout << "Done!!!!!!!" << std::endl;
+
+  if (cnt == tp.queues.size()) {
+    std::cout << "testThreadPoolWithMultipleTasks: PASS\n";
+  } else {
+    std::cout << "testThreadPoolWithMultipleTasks: FAIL\n";
+  }
 }
 
 } // namespace work_stealing
 
 int main() {
   using namespace work_stealing;
-  // testCapacity();
-  // testPutAndGet();
-  // testCircularIndexing();
-  // testResize();
-  // testResizeWithWraparound();
-  //
-  // testIsEmpty();
-  // testPushBottomAndPopTop();
-  // testPushBottomAndPopBottom();
-  // testPopFromEmptyQueue();
-  // testConcurrentPushPop();
+  testCapacity();
+  testPutAndGet();
+  testCircularIndexing();
+  testResize();
+  testResizeWithWraparound();
+  
+  testIsEmpty();
+  testPushBottomAndPopTop();
+  testPushBottomAndPopBottom();
+  testPopFromEmptyQueue();
+  testConcurrentPushPop();
 
-  // testThreadPoolBasicFunctionality();
   testThreadPoolWithMultipleTasks();
-  // testThreadPoolShutdown();
-  // testThreadPoolTaskStealing();
-  // testThreadPoolConcurrentEnqueue();
   return 0;
 }

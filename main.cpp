@@ -4,35 +4,17 @@
 #include <memory>
 #include <ostream>
 
-// Unity build
-#include "collatz.cpp"
-#include "colors.hpp"
 #include "thread_pools/locking_threadpool.hpp"
 #include "thread_pools/work_stealing_queue.hpp"
 #include "timer.hpp"
 #include "utils.hpp"
+#include "collatz.h"
 #include "statistics.hpp"
 
-/**
- * @brief An iterative method of the collatz conjectures famous sequence.
- *
- * @param n The number to start the sequence from.
- * @return The number of steps it took to reach 1.
- */
-inline int16_t collatz(uint64_t n) {
-  // Proof by wikipedia: less than 10^12 is 989345275647, which has 1348 steps
-  // Meaning that for the maximum uint32 -> 2^32-1 which is < 10^12 -> meaning steps can be integer
-  int16_t steps = 0;
-  while (n != 1) {
-    if (n % 2 == 0) {
-      n /= 2;
-    } else {
-      n = 3 * n + 1;
-    }
-    steps++;
-  }
-  return steps;
-}
+// Unity build
+#include "collatz.cpp"
+#include "thread_pools/work_stealing_queue.cpp"
+
 
 /**
  * @brief Times the collatz conjecture with a function
@@ -137,47 +119,47 @@ int main() {
   std::vector<std::tuple<std::string, std::function<std::vector<int16_t>(uint64_t)>>> functions = {
       {"Naive     ", naive},
 
-      {"LockingTP 100b / 4", locking_threadpool<n_max / 100, 4>},
-      // {"LockingTP 1000b / 4", locking_threadpool<n_max / 1000, 4>},
-      // {"LockingTP 10000b / 4", locking_threadpool<n_max / 10000, 4>},
-      // {"Ws_CAS_TP 100b / 4", work_stealing_threadpool<n_max / 100, 4>},
-      // {"Ws_CAS_TP 1000b / 4", work_stealing_threadpool<n_max / 1000, 4>},
-      // {"Ws_CAS_TP 10000b / 4", work_stealing_threadpool<n_max / 10000, 4>},
+      {"LockingTP 100b / 4t", locking_threadpool<n_max / 100, 4>},
+      {"LockingTP 1000b / 4t", locking_threadpool<n_max / 1000, 4>},
+      {"LockingTP 10000b / 4t", locking_threadpool<n_max / 10000, 4>},
+      {"Ws_CAS_TP 100b / 4t", work_stealing_threadpool<n_max / 100, 4>},
+      {"Ws_CAS_TP 1000b / 4t", work_stealing_threadpool<n_max / 1000, 4>},
+      {"Ws_CAS_TP 10000b / 4t", work_stealing_threadpool<n_max / 10000, 4>},
 
-      // {"LockingTP 100b / 6", locking_threadpool<n_max / 100, 6>},
-      // {"LockingTP 1000b / 6", locking_threadpool<n_max / 1000, 6>},
-      // {"LockingTP 10000b / 6", locking_threadpool<n_max / 10000, 6>},
-      {"Ws_CAS_TP 100b / 6", work_stealing_threadpool<n_max / 100, 6>},
-      {"Ws_CAS_TP 1000b / 6", work_stealing_threadpool<n_max / 1000, 6>},
-      {"Ws_CAS_TP 10000b / 6", work_stealing_threadpool<n_max / 10000, 6>},
+      {"LockingTP 100b / 6t", locking_threadpool<n_max / 100, 6>},
+      {"LockingTP 1000b / 6t", locking_threadpool<n_max / 1000, 6>},
+      {"LockingTP 10000b / 6t", locking_threadpool<n_max / 10000, 6>},
+      {"Ws_CAS_TP 100b / 6t", work_stealing_threadpool<n_max / 100, 6>},
+      {"Ws_CAS_TP 1000b / 6t", work_stealing_threadpool<n_max / 1000, 6>},
+      {"Ws_CAS_TP 10000b / 6t", work_stealing_threadpool<n_max / 10000, 6>},
 
-      // {"LockingTP 100b / 8", locking_threadpool<n_max / 100, 8>},
-      // {"LockingTP 1000b / 8", locking_threadpool<n_max / 1000, 8>},
-      // {"LockingTP 10000b / 8", locking_threadpool<n_max / 10000, 8>},
-      // {"Ws_CAS_TP 100b / 8", work_stealing_threadpool<n_max / 100, 8>},
-      // {"Ws_CAS_TP 1000b / 8", work_stealing_threadpool<n_max / 1000, 8>},
-      // {"Ws_CAS_TP 10000b / 8", work_stealing_threadpool<n_max / 10000, 8>},
-      //
-      // {"LockingTP 100b / 16", locking_threadpool<n_max / 100, 16>},
-      // {"LockingTP 1000b / 16", locking_threadpool<n_max / 1000, 16>},
-      // {"LockingTP 10000b / 16", locking_threadpool<n_max / 10000, 16>},
-      // {"Ws_CAS_TP 100b / 16", work_stealing_threadpool<n_max / 100, 16>},
-      // {"Ws_CAS_TP 1000b / 16", work_stealing_threadpool<n_max / 1000, 16>},
-      // {"Ws_CAS_TP 10000b / 16", work_stealing_threadpool<n_max / 10000, 16>},
-      //
-      // {"LockingTP 100b / 32", locking_threadpool<n_max / 100, 32>},
-      // {"LockingTP 1000b / 32", locking_threadpool<n_max / 1000, 32>},
-      // {"LockingTP 10000b / 32", locking_threadpool<n_max / 10000, 32>},
-      // {"Ws_CAS_TP 100b / 32", work_stealing_threadpool<n_max / 100, 32>},
-      // {"Ws_CAS_TP 1000b / 32", work_stealing_threadpool<n_max / 1000, 32>},
-      // {"Ws_CAS_TP 10000b / 32", work_stealing_threadpool<n_max / 10000, 32>},
-      //
-      // {"LockingTP 100b / 64", locking_threadpool<n_max / 100, 64>},
-      // {"LockingTP 1000b / 64", locking_threadpool<n_max / 1000, 64>},
-      // {"LockingTP 10000b / 64", locking_threadpool<n_max / 10000, 64>},
-      // {"Ws_CAS_TP 100b / 64", work_stealing_threadpool<n_max / 100, 64>},
-      // {"Ws_CAS_TP 1000b / 64", work_stealing_threadpool<n_max / 1000, 64>},
-      // {"Ws_CAS_TP 10000b / 64", work_stealing_threadpool<n_max / 10000, 64>},
+      {"LockingTP 100b / 8t", locking_threadpool<n_max / 100, 8>},
+      {"LockingTP 1000b / 8t", locking_threadpool<n_max / 1000, 8>},
+      {"LockingTP 10000b / 8t", locking_threadpool<n_max / 10000, 8>},
+      {"Ws_CAS_TP 100b / 8t", work_stealing_threadpool<n_max / 100, 8>},
+      {"Ws_CAS_TP 1000b / 8t", work_stealing_threadpool<n_max / 1000, 8>},
+      {"Ws_CAS_TP 10000b / 8t", work_stealing_threadpool<n_max / 10000, 8>},
+      
+      {"LockingTP 100b / 16t", locking_threadpool<n_max / 100, 16>},
+      {"LockingTP 1000b / 16t", locking_threadpool<n_max / 1000, 16>},
+      {"LockingTP 10000b / 16t", locking_threadpool<n_max / 10000, 16>},
+      {"Ws_CAS_TP 100b / 16t", work_stealing_threadpool<n_max / 100, 16>},
+      {"Ws_CAS_TP 1000b / 16t", work_stealing_threadpool<n_max / 1000, 16>},
+      {"Ws_CAS_TP 10000b / 16t", work_stealing_threadpool<n_max / 10000, 16>},
+      
+      {"LockingTP 100b / 32t", locking_threadpool<n_max / 100, 32>},
+      {"LockingTP 1000b / 32t", locking_threadpool<n_max / 1000, 32>},
+      {"LockingTP 10000b / 32t", locking_threadpool<n_max / 10000, 32>},
+      {"Ws_CAS_TP 100b / 32t", work_stealing_threadpool<n_max / 100, 32>},
+      {"Ws_CAS_TP 1000b / 32t", work_stealing_threadpool<n_max / 1000, 32>},
+      {"Ws_CAS_TP 10000b / 32t", work_stealing_threadpool<n_max / 10000, 32>},
+      
+      {"LockingTP 100b / 64t", locking_threadpool<n_max / 100, 64>},
+      {"LockingTP 1000b / 64t", locking_threadpool<n_max / 1000, 64>},
+      {"LockingTP 10000b / 64t", locking_threadpool<n_max / 10000, 64>},
+      {"Ws_CAS_TP 100b / 64t", work_stealing_threadpool<n_max / 100, 64>},
+      {"Ws_CAS_TP 1000b / 64t", work_stealing_threadpool<n_max / 1000, 64>},
+      {"Ws_CAS_TP 10000b / 64t", work_stealing_threadpool<n_max / 10000, 64>},
   };
 
   std::vector<double> times;

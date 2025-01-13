@@ -1,3 +1,9 @@
+/**
+ * @file locking_threadpool.hpp
+ * @brief A thread pool with a blocking queue
+ * @date 2025-1-08
+ */
+
 #pragma once
 
 #include <condition_variable>
@@ -8,8 +14,19 @@
 #include <thread>
 
 namespace locking {
+/**
+ * @brief A thread pool with a blocking queue
+ */
 class ThreadPool {
 public:
+  /**
+   * @brief Construct a new ThreadPool object
+   * 
+   * @param _num_threads the number of threads to use in the pool
+   * 
+   * This constructor will spawn the specified number of threads and start
+   * the loop to wait for tasks. 
+   */
   explicit ThreadPool(size_t _num_threads)
       : num_threads(_num_threads), task_counter(0), stop(false) {
     for (size_t i = 0; i < num_threads; ++i) {
@@ -49,6 +66,15 @@ public:
     }
   }
 
+  /**
+   * @brief Submits a task to the thread pool.
+   *
+   * This function allows you to submit a task with the given arguments to be executed by the thread pool.
+   * The task will be executed by one of the available threads in the pool.
+   *
+   * @param func The function to be executed by the thread pool.
+   * @param args The arguments to be passed to the task.
+   */
   template <class F, class... Args>
   void Enqueue(F &&func, Args &&...args) {
     {
@@ -63,11 +89,23 @@ public:
     }
   }
 
+  /**
+   * @brief Blocks the calling thread until all tasks have been completed.
+   *
+   * This function will block the calling thread until all tasks that have been submitted to the thread pool
+   * have been completed. This is useful for cleanup or for waiting until all tasks have finished before
+   * shutting down the thread pool.
+   */
   void Wait() {
     std::unique_lock<std::mutex> lock(task_counter_mutex);
     counter_condition.wait(lock, [this]() { return this->task_counter == 0; });
   }
 
+  /**
+   * @brief Returns the number of threads in the thread pool.
+   *
+   * @return The number of threads in the thread pool.
+   */
   size_t GetThreadCount() const { return num_threads; }
 
 private:

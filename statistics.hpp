@@ -1,6 +1,5 @@
 #pragma once
 
-#include "colors.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -9,6 +8,9 @@
 #include <numeric>
 #include <string>
 #include <vector>
+
+#include "utils.hpp"
+
 
 struct statistics {
   std::string name;

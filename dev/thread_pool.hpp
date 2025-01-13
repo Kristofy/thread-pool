@@ -13,7 +13,13 @@
  * kristofosztopani@gmail.com
  *
  * @note This implementation is optimized for the AMD64 architecture.
+ * @note This is work in progress, and not the final version.
  */
+
+
+// ***************************************************************************************************************** //
+// This is a work in progress optimization, a working version is available at ../thread_pools/work_stealing_queue.hpp //
+// ***************************************************************************************************************** //
 
 #pragma once
 

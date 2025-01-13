@@ -1,10 +1,19 @@
+/**
+ * @file collatz.cpp
+ * @brief The collatz conjecture
+ * @date 2025-1-08
+ * 
+ * Collatz conjecture and related functions
+ */
+
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <limits>
 #include <vector>
-#include "colors.hpp"
+
 #include "utils.hpp"
+#include "collatz.h"
 
 /**
  * @brief Verifies that the function in the collatz conjecture behaves well in 64 bit integers
@@ -12,7 +21,7 @@
  * Using unsiged 64 bit integers for the values the function should never produce an overflow
  * @param n
  */
-void verify_collatz_until(uint64_t n, bool colored_output = true, bool progress_update = true) {
+void verify_collatz_until(uint64_t n, bool colored_output, bool progress_update) {
 
   // Intro
   if (progress_update) {
@@ -56,7 +65,22 @@ void verify_collatz_until(uint64_t n, bool colored_output = true, bool progress_
   }
 }
 
-uint64_t get_collatz_checksum_until(uint64_t n, bool colored_output = true, bool progress_update = true) {
+/**
+ * @brief Calculates the checksum of the collatz sequence until @a n.
+ *
+ * @details This function calculates the checksum of the collatz sequence until
+ * @a n. The checksum is calculated by summing the number of steps it takes to
+ * reach 1 for each number from 1 to @a n. The function prints out the progress
+ * of the calculation as a percentage of the total number of calculations.
+ *
+ * @param n The number to calculate the checksum until.
+ * @param colored_output If set to @c true, the output will be colored using
+ * the @c TerminalColor enum.
+ * @param progress_update If set to @c true, the progress of the calculation
+ * will be printed out as a percentage of the total number of calculations.
+ * @return The checksum of the collatz sequence until @a n.
+ */
+uint64_t get_collatz_checksum_until(uint64_t n, bool colored_output, bool progress_update) {
 
   const uint64_t COLLATZ_1E8_CHECKSUM = 6117591564791386555ULL;
   const uint64_t COLLATZ_1E9_CHECKSUM = 1971640394277668423ULL;
@@ -110,4 +134,26 @@ uint64_t get_collatz_checksum_until(uint64_t n, bool colored_output = true, bool
   }
 
   return checksum(collatz_values);
+}
+
+
+/**
+ * @brief An iterative method of the collatz conjectures famous sequence.
+ *
+ * @param n The number to start the sequence from.
+ * @return The number of steps it took to reach 1.
+ */
+int16_t collatz(uint64_t n) {
+  // Proof by wikipedia: less than 10^12 is 989345275647, which has 1348 steps
+  // Meaning that for the maximum uint32 -> 2^32-1 which is < 10^12 -> meaning steps can be integer
+  int16_t steps = 0;
+  while (n != 1) {
+    if (n % 2 == 0) {
+      n /= 2;
+    } else {
+      n = 3 * n + 1;
+    }
+    steps++;
+  }
+  return steps;
 }
