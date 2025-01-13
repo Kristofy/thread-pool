@@ -26,7 +26,7 @@ make # Or in release mode `make release=1`
 
 # To only run
 ./main
-``` 
+```
 
 ### Tests
 
@@ -49,6 +49,7 @@ If you have to force a rebuild use `make clean`
 Open the `./main.cpp` file and comment in / out the relevant benchmarks in the `main` function
 
 For example
+
 ```cpp
  std::vector<std::tuple<std::string, std::function<std::vector<int16_t>(uint64_t)>>> functions = {
       {"Naive", naive},
@@ -63,7 +64,9 @@ This means that the Naive, Threadpool with Blocking Queue (LockingTP) and Thread
 The Blocking queue and the Work Stealing queue will have a 100 block size and 2 threads and 10000 block size and 6 threads versions. Where 100 or 100000 small tasks are bundled togethere in a block, this essentially means the number of "work" in a single task.
 
 ## Example Results
+
 An output should be interactively rendered like this
+
 ```
 $ make release=1 run
 Benchmark #1: Naive
@@ -103,98 +106,93 @@ Here `LockingTP 10000b / 6t` is 1.08 times faster than `Ws_CAS_TP 100b / 2t`, 1.
 ## Results
 
 Run on:
+
 - fedora-41-x86_64 (GNU/Linux)
 - gcc (GCC) 14.2.1 20240912 (Red Hat 14.2.1-3)
 - Ryzen 7 5800U 8C / 16T Processor
 - 16 GB 4266 MT/s Dual Channel LPDDR4
 
+**Results by thread count**
 
+Fastest to slowest
 
-For block sizes of 100, 1000 and 10000 and threads of 4, 6, 8, 16, 32 and 64 the results are as follows:
+- 'Ws_CAS_TP 1000b / 16t' ran
+- 1.35 ± 0.29 times faster than 'Ws_CAS_TP 1000b / 32t';
+- 1.42 ± 0.11 times faster than 'Ws_CAS_TP 1000b / 8t';
+- 1.60 ± 0.11 times faster than 'Ws_CAS_TP 1000b / 64t';
+- 2.10 ± 0.05 times faster than 'Ws_CAS_TP 1000b / 4t';
+- 3.60 ± 0.03 times faster than 'Ws_CAS_TP 1000b / 2t';
+- 7.04 ± 0.02 times faster than 'Ws_CAS_TP 1000b / 1t';
 
-| **Benchmark**                 | **Time (mean ± σ)**   | **Range (min … max)**         |
-|-------------------------------|-----------------------|-------------------------------|
-| Naive                        | 131.24 ms ± 8.32 ms   | 126.01 ms … 154.93 ms         |
-| LockingTP 100b / 4t          | 85.66 ms ± 45.97 ms   | 37.81 ms … 154.93 ms          |
-| LockingTP 1000b / 4t         | 70.02 ms ± 43.57 ms   | 37.81 ms … 154.93 ms          |
-| LockingTP 10000b / 4t        | 64.07 ms ± 39.12 ms   | 37.81 ms … 154.93 ms          |
-| Ws_CAS_TP 100b / 4t          | 70.49 ms ± 37.28 ms   | 37.81 ms … 154.93 ms          |
-| Ws_CAS_TP 1000b / 4t         | 74.34 ms ± 35.10 ms   | 37.81 ms … 154.93 ms          |
-| Ws_CAS_TP 10000b / 4t        | 77.72 ms ± 33.60 ms   | 37.81 ms … 154.93 ms          |
-| LockingTP 100b / 6t          | 71.65 ms ± 35.29 ms   | 28.55 ms … 154.93 ms          |
-| LockingTP 1000b / 6t         | 66.92 ms ± 35.86 ms   | 28.55 ms … 154.93 ms          |
-| LockingTP 10000b / 6t        | 63.70 ms ± 35.37 ms   | 28.55 ms … 154.93 ms          |
-| Ws_CAS_TP 100b / 6t          | 67.02 ms ± 35.33 ms   | 28.55 ms … 154.93 ms          |
-| Ws_CAS_TP 1000b / 6t         | 69.63 ms ± 34.91 ms   | 28.55 ms … 154.93 ms          |
-| Ws_CAS_TP 10000b / 6t        | 72.22 ms ± 34.75 ms   | 28.55 ms … 154.93 ms          |
-| LockingTP 100b / 8t          | 68.83 ms ± 35.65 ms   | 23.95 ms … 154.93 ms          |
-| LockingTP 1000b / 8t         | 65.88 ms ± 36.16 ms   | 23.83 ms … 154.93 ms          |
-| LockingTP 10000b / 8t        | 63.88 ms ± 35.88 ms   | 23.83 ms … 154.93 ms          |
-| Ws_CAS_TP 100b / 8t          | 67.04 ms ± 37.05 ms   | 23.83 ms … 154.93 ms          |
-| Ws_CAS_TP 1000b / 8t         | 69.60 ms ± 37.54 ms   | 23.83 ms … 154.93 ms          |
-| Ws_CAS_TP 10000b / 8t        | 72.29 ms ± 38.36 ms   | 23.83 ms … 154.93 ms          |
-| LockingTP 100b / 16t         | 69.61 ms ± 39.17 ms   | 17.47 ms … 154.93 ms          |
-| LockingTP 1000b / 16t        | 67.15 ms ± 39.78 ms   | 17.17 ms … 154.93 ms          |
-| LockingTP 10000b / 16t       | 65.01 ms ± 40.08 ms   | 17.17 ms … 154.93 ms          |
-| Ws_CAS_TP 100b / 16t         | 70.40 ms ± 47.14 ms   | 17.17 ms … 265.88 ms          |
-| Ws_CAS_TP 1000b / 16t        | 74.00 ms ± 49.31 ms   | 17.17 ms … 265.88 ms          |
-| Ws_CAS_TP 10000b / 16t       | 77.09 ms ± 50.65 ms   | 17.17 ms … 265.88 ms          |
-| LockingTP 100b / 32t         | 74.89 ms ± 50.87 ms   | 17.17 ms … 265.88 ms          |
-| LockingTP 1000b / 32t        | 72.80 ms ± 51.04 ms   | 17.17 ms … 265.88 ms          |
-| LockingTP 10000b / 32t       | 70.92 ms ± 51.07 ms   | 17.17 ms … 265.88 ms          |
-| Ws_CAS_TP 100b / 32t         | 84.63 ms ± 88.65 ms   | 17.17 ms … 543.82 ms          |
-| Ws_CAS_TP 1000b / 32t        | 91.66 ms ± 95.12 ms   | 17.17 ms … 543.82 ms          |
-| Ws_CAS_TP 10000b / 32t       | 97.83 ms ± 99.52 ms   | 17.17 ms … 543.82 ms          |
-| LockingTP 100b / 64t         | 95.39 ms ± 98.90 ms   | 17.17 ms … 543.82 ms          |
-| LockingTP 1000b / 64t        | 93.09 ms ± 98.25 ms   | 17.17 ms … 543.82 ms          |
-| LockingTP 10000b / 64t       | 91.77 ms ± 97.09 ms   | 17.17 ms … 543.82 ms          |
-| Ws_CAS_TP 100b / 64t         | 122.78 ms ± 205.27 ms | 17.17 ms … 1351.03 ms         |
-| Ws_CAS_TP 1000b / 64t        | 138.51 ms ± 223.09 ms | 17.17 ms … 1351.03 ms         |
-| Ws_CAS_TP 10000b / 64t       | 151.95 ms ± 234.43 ms | 17.17 ms … 1351.03 ms         |
+Comparing with other implementation and other configurations with block sizes of 100, 1000 and 10000 and threads of 4, 6, 8, 16, 32 and 64 the results are as follows:
 
+| Benchmark                  | Time (mean ± σ)     | Range (min … max)     |
+| -------------------------- | ------------------- | --------------------- |
+| **Naive**                  | 126.39 ms ± 4.07 ms | 123.94 ms … 138.15 ms |
+| **LockingTP 100b / 4t**    | 39.24 ms ± 1.62 ms  | 37.96 ms … 43.01 ms   |
+| **LockingTP 1000b / 4t**   | 38.90 ms ± 0.43 ms  | 38.22 ms … 39.55 ms   |
+| **LockingTP 10000b / 4t**  | 45.86 ms ± 0.61 ms  | 45.20 ms … 46.87 ms   |
+| **Ws_CAS_TP 100b / 4t**    | 38.57 ms ± 0.51 ms  | 37.94 ms … 39.42 ms   |
+| **Ws_CAS_TP 1000b / 4t**   | 39.05 ms ± 1.44 ms  | 37.15 ms … 41.77 ms   |
+| **Ws_CAS_TP 10000b / 4t**  | 41.52 ms ± 3.30 ms  | 39.33 ms … 50.92 ms   |
+| **LockingTP 100b / 6t**    | 29.27 ms ± 0.39 ms  | 28.61 ms … 29.93 ms   |
+| **LockingTP 1000b / 6t**   | 29.64 ms ± 0.86 ms  | 29.01 ms … 32.00 ms   |
+| **LockingTP 10000b / 6t**  | 35.68 ms ± 0.86 ms  | 34.40 ms … 37.07 ms   |
+| **Ws_CAS_TP 100b / 6t**    | 31.80 ms ± 3.75 ms  | 28.51 ms … 40.88 ms   |
+| **Ws_CAS_TP 1000b / 6t**   | 28.80 ms ± 0.78 ms  | 28.04 ms … 30.62 ms   |
+| **Ws_CAS_TP 10000b / 6t**  | 29.88 ms ± 0.86 ms  | 29.16 ms … 32.26 ms   |
+| **LockingTP 100b / 8t**    | 25.08 ms ± 1.00 ms  | 23.92 ms … 26.70 ms   |
+| **LockingTP 1000b / 8t**   | 24.46 ms ± 0.61 ms  | 23.80 ms … 25.90 ms   |
+| **LockingTP 10000b / 8t**  | 30.43 ms ± 1.04 ms  | 29.36 ms … 32.73 ms   |
+| **Ws_CAS_TP 100b / 8t**    | 24.46 ms ± 0.32 ms  | 23.98 ms … 24.93 ms   |
+| **Ws_CAS_TP 1000b / 8t**   | 23.26 ms ± 0.21 ms  | 22.99 ms … 23.68 ms   |
+| **Ws_CAS_TP 10000b / 8t**  | 24.64 ms ± 0.31 ms  | 24.25 ms … 25.31 ms   |
+| **LockingTP 100b / 16t**   | 17.69 ms ± 0.39 ms  | 17.23 ms … 18.53 ms   |
+| **LockingTP 1000b / 16t**  | 20.09 ms ± 2.62 ms  | 17.64 ms … 25.38 ms   |
+| **LockingTP 10000b / 16t** | 20.56 ms ± 1.20 ms  | 19.21 ms … 23.67 ms   |
+| **Ws_CAS_TP 100b / 16t**   | 21.84 ms ± 2.04 ms  | 18.70 ms … 25.97 ms   |
+| **Ws_CAS_TP 1000b / 16t**  | 17.85 ms ± 0.57 ms  | 17.06 ms … 19.10 ms   |
+| **Ws_CAS_TP 10000b / 16t** | 18.68 ms ± 0.43 ms  | 17.97 ms … 19.47 ms   |
+| **LockingTP 100b / 32t**   | 18.22 ms ± 0.51 ms  | 17.09 ms … 18.94 ms   |
+| **LockingTP 1000b / 32t**  | 17.46 ms ± 0.34 ms  | 17.07 ms … 18.00 ms   |
+| **LockingTP 10000b / 32t** | 20.25 ms ± 1.18 ms  | 18.86 ms … 23.11 ms   |
+| **Ws_CAS_TP 100b / 32t**   | 24.63 ms ± 2.04 ms  | 22.39 ms … 29.71 ms   |
+| **Ws_CAS_TP 1000b / 32t**  | 20.65 ms ± 1.40 ms  | 18.73 ms … 23.48 ms   |
+| **Ws_CAS_TP 10000b / 32t** | 23.67 ms ± 2.23 ms  | 21.01 ms … 27.72 ms   |
+| **LockingTP 100b / 64t**   | 23.26 ms ± 2.60 ms  | 19.97 ms … 28.93 ms   |
+| **LockingTP 1000b / 64t**  | 23.64 ms ± 2.52 ms  | 19.68 ms … 27.22 ms   |
+| **LockingTP 10000b / 64t** | 43.18 ms ± 7.21 ms  | 29.12 ms … 51.38 ms   |
+| **Ws_CAS_TP 100b / 64t**   | 37.47 ms ± 8.34 ms  | 29.44 ms … 58.74 ms   |
+| **Ws_CAS_TP 1000b / 64t**  | 30.14 ms ± 3.81 ms  | 23.38 ms … 39.41 ms   |
+| **Ws_CAS_TP 10000b / 64t** | 33.19 ms ± 4.54 ms  | 26.17 ms … 39.45 ms   |
 
+### Summary (Baseline(Fastest): `LockingTP 10000b / 6t`)
 
-### Summary (Baseline(Fastest):  `LockingTP 10000b / 6t`)
-
-| Configuration                   | Relative Speed (Slower By)     |
-|---------------------------------|--------------------------------|
-| LockingTP 10000b / 8t           | 1.00 ± 0.79 times slower       |
-| LockingTP 10000b / 4t           | 1.01 ± 0.82 times slower       |
-| LockingTP 10000b / 16t          | 1.02 ± 0.81 times slower       |
-| LockingTP 1000b / 8t            | 1.03 ± 0.75 times slower       |
-| LockingTP 1000b / 6t            | 1.05 ± 0.73 times slower       |
-| Ws_CAS_TP 100b / 6t             | 1.05 ± 0.73 times slower       |
-| Ws_CAS_TP 100b / 8t             | 1.05 ± 0.74 times slower       |
-| LockingTP 1000b / 16t           | 1.05 ± 0.77 times slower       |
-| LockingTP 100b / 8t             | 1.08 ± 0.70 times slower       |
-| Ws_CAS_TP 1000b / 8t            | 1.09 ± 0.71 times slower       |
-| LockingTP 100b / 16t            | 1.09 ± 0.72 times slower       |
-| Ws_CAS_TP 1000b / 6t            | 1.09 ± 0.68 times slower       |
-| LockingTP 1000b / 4t            | 1.10 ± 0.76 times slower       |
-| Ws_CAS_TP 100b / 16t            | 1.11 ± 0.79 times slower       |
-| Ws_CAS_TP 100b / 4t             | 1.11 ± 0.69 times slower       |
-| LockingTP 10000b / 32t          | 1.11 ± 0.82 times slower       |
-| LockingTP 100b / 6t             | 1.12 ± 0.66 times slower       |
-| Ws_CAS_TP 10000b / 6t           | 1.13 ± 0.65 times slower       |
-| Ws_CAS_TP 10000b / 8t           | 1.13 ± 0.68 times slower       |
-| LockingTP 1000b / 32t           | 1.14 ± 0.78 times slower       |
-| Ws_CAS_TP 1000b / 16t           | 1.16 ± 0.75 times slower       |
-| Ws_CAS_TP 1000b / 4t            | 1.17 ± 0.62 times slower       |
-| LockingTP 100b / 32t            | 1.18 ± 0.75 times slower       |
-| Ws_CAS_TP 10000b / 16t          | 1.21 ± 0.71 times slower       |
-| Ws_CAS_TP 10000b / 4t           | 1.22 ± 0.58 times slower       |
-| Ws_CAS_TP 100b / 32t            | 1.33 ± 0.89 times slower       |
-| LockingTP 100b / 4t             | 1.34 ± 0.57 times slower       |
-| Ws_CAS_TP 1000b / 32t           | 1.44 ± 0.82 times slower       |
-| LockingTP 10000b / 64t          | 1.44 ± 0.83 times slower       |
-| LockingTP 1000b / 64t           | 1.46 ± 0.82 times slower       |
-| LockingTP 100b / 64t            | 1.50 ± 0.79 times slower       |
-| Ws_CAS_TP 10000b / 32t          | 1.54 ± 0.75 times slower       |
-| Ws_CAS_TP 100b / 64t            | 1.93 ± 0.91 times slower       |
-| Naive                           | 2.06 ± 0.27 times slower       |
-| Ws_CAS_TP 1000b / 64t           | 2.17 ± 0.78 times slower       |
-| Ws_CAS_TP 10000b / 64t          | 2.39 ± 0.69 times slower       |
-
+- **LockingTP 1000b / 32t** ran:
+  - 1.01 ± 0.03 times faster than **LockingTP 100b / 16t**;
+  - 1.02 ± 0.04 times faster than **Ws_CAS_TP 1000b / 16t**;
+  - 1.04 ± 0.03 times faster than **LockingTP 100b / 32t**;
+  - 1.07 ± 0.03 times faster than **Ws_CAS_TP 10000b / 16t**;
+  - 1.15 ± 0.11 times faster than **LockingTP 1000b / 16t**;
+  - 1.16 ± 0.05 times faster than **LockingTP 10000b / 32t**;
+  - 1.18 ± 0.05 times faster than **LockingTP 10000b / 16t**;
+  - 1.18 ± 0.06 times faster than **Ws_CAS_TP 1000b / 32t**;
+  - 1.25 ± 0.08 times faster than **Ws_CAS_TP 100b / 16t**;
+  - 1.33 ± 0.09 times faster than **LockingTP 100b / 64t**;
+  - 1.33 ± 0.02 times faster than **Ws_CAS_TP 1000b / 8t**;
+  - 1.35 ± 0.08 times faster than **LockingTP 1000b / 64t**;
+  - 1.36 ± 0.07 times faster than **Ws_CAS_TP 10000b / 32t**;
+  - 1.40 ± 0.02 times faster than **LockingTP 1000b / 8t**;
+  - 1.40 ± 0.03 times faster than **LockingTP 100b / 64t**;
+  - 1.46 ± 0.03 times faster than **LockingTP 10000b / 8t**;
+  - 1.48 ± 0.04 times faster than **LockingTP 100b / 4t**;
+  - 1.62 ± 0.04 times faster than **LockingTP 1000b / 4t**;
+  - 1.65 ± 0.02 times faster than **LockingTP 10000b / 4t**;
+  - 1.66 ± 0.06 times faster than **Ws_CAS_TP 10000b / 4t**;
+  - 1.67 ± 0.03 times faster than **LockingTP 100b / 8t**;
+  - 1.73 ± 0.03 times faster than **LockingTP 100b / 100t**;
+  - 1.78 ± 0.04 times faster than **LockingTP 100b / 1000t**;
+  - 1.78 ± 0.01 times faster than **LockingTP 100b / 10000t**;
 
 ### The benchmarked tasks
 
